@@ -37,7 +37,7 @@ then
                 chown -R $2 /etc/passmanager/
                 echo -e "$green OK"
             else
-                echo -e "$red Please provide your normal user as second argument"
+                echo -e "$red Please provide your username as second argument"
             fi
         fi 
     fi
