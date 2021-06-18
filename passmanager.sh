@@ -167,6 +167,25 @@ then
         echo "${split[0]}" 
     done
     echo -e "\n"
+elif [ "$1" == "listpwd" ]
+then
+    name=$(cat $DIR/passmanager.conf | grep Name | awk '{ print $2 }')
+    sftphost=$(cat $DIR/passmanager.conf | grep SFTPHost | awk '{ print $2 }')
+    sftpport=$(cat $DIR/passmanager.conf | grep SFTPPort | awk '{ print $2 }')
+    sftpuser=$(cat $DIR/passmanager.conf | grep SFTPUser | awk '{ print $2 }')
+    list_pwd=$(sftp -q -P $sftpport $sftpuser@$sftphost <<< $"ls *.gz.enc" | grep -v '^sftp>')
+    printf "%-30s| %-20s\n" Titre Creator
+    echo "**************************************************"
+    for pwd_file in $list_pwd
+    do
+        nom=$(echo $pwd_file | awk -F '-' '{ print $1 }')
+        creator=$(echo $pwd_file | awk -F '-' '{ print $2 }')
+        destinator=$(echo $pwd_file | awk -F '-' '{ print $3 }' | awk -F '.' '{ print $1 }')
+        if [ "$destinator" == "$name" ]
+        then
+	    printf "%-30s| %-20s\n" $nom $creator
+        fi
+    done
 else
     echo -e "$red Unknown option"
     exit 1
