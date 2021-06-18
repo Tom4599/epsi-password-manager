@@ -50,8 +50,8 @@ then
     mkdir -p /tmp/passmanager/getpwd/
     read -p "Please enter the password creator : " creator
 
-    sftp -P $sftpport $sftpuser@$sftphost:/$passwordname-$creator-$name.gz.enc /tmp/passmanager/getpwd/$passwordname-$creator-$name.gz.enc > /dev/null
-    sftp -P $sftpport $sftpuser@$sftphost:/$passwordname-$creator-$name.bin.enc /tmp/passmanager/getpwd/$passwordname-$creator-$name.bin.enc > /dev/null
+    sftp -q -P $sftpport $sftpuser@$sftphost:/$passwordname-$creator-$name.gz.enc /tmp/passmanager/getpwd/$passwordname-$creator-$name.gz.enc > /dev/null
+    sftp -q -P $sftpport $sftpuser@$sftphost:/$passwordname-$creator-$name.bin.enc /tmp/passmanager/getpwd/$passwordname-$creator-$name.bin.enc > /dev/null
     openssl rsautl -decrypt -inkey $DIR/private.key -in /tmp/passmanager/getpwd/$passwordname-$creator-$name.bin.enc -out /tmp/passmanager/getpwd/$passwordname-$creator-$name.bin
     openssl enc -d -aes-256-cbc -md sha512 -pbkdf2 -in /tmp/passmanager/getpwd/$passwordname-$creator-$name.gz.enc -out /tmp/passmanager/getpwd/$passwordname-$creator-$name.gz -pass file:/tmp/passmanager/getpwd/$passwordname-$creator-$name.bin
     gzip -d /tmp/passmanager/getpwd/$passwordname-$creator-$name.gz
@@ -88,8 +88,8 @@ then
         openssl rand -base64 32 > "/tmp/passmanager/addpwd/$passwordname-$name-$user.bin"
         openssl rsautl -encrypt -pubin -inkey "$DIR/users.d/$user.conf" -in "/tmp/passmanager/addpwd/$passwordname-$name-$user.bin" -out "/tmp/passmanager/addpwd/$passwordname-$name-$user.bin.enc"
         openssl enc -aes-256-cbc -md sha512 -pbkdf2 -salt -in /tmp/passmanager/addpwd/$passwordname-$name-$user.gz -out /tmp/passmanager/addpwd/$passwordname-$name-$user.gz.enc -pass file:/tmp/passmanager/addpwd/$passwordname-$name-$user.bin
-        sftp -P $sftpport $sftpuser@$sftphost <<< $"put /tmp/passmanager/addpwd/$passwordname-$name-$user.gz.enc" > /dev/null
-        sftp -P $sftpport $sftpuser@$sftphost <<< $"put /tmp/passmanager/addpwd/$passwordname-$name-$user.bin.enc" > /dev/null
+        sftp -q -P $sftpport $sftpuser@$sftphost <<< $"put /tmp/passmanager/addpwd/$passwordname-$name-$user.gz.enc" > /dev/null
+        sftp -q -P $sftpport $sftpuser@$sftphost <<< $"put /tmp/passmanager/addpwd/$passwordname-$name-$user.bin.enc" > /dev/null
         rm /tmp/passmanager/addpwd/$passwordname-$name-$user*
     done
 elif [ "$1" == "getpublickey" ]
