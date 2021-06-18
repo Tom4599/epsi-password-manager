@@ -8,38 +8,27 @@ function join { local IFS="$1"; shift; echo "$*"; }
 
 if [ "$1" == "init" ]
 then
-    if [ -d "/etc/passmanager" ]
+    if [ -d "/home/$USER/.passmanager" ]
     then
         echo -e "$blue Nothing to do, directory already exist"
     else
-        if [ "$EUID" -ne 0 ]
-        then
-            echo -e "$red Please run this option as root"
-            exit 1
-        else
-            if [ -n "$2" ]
-            then
-                echo -e "$blue Creating directories..."
-                mkdir -p /etc/passmanager/users.d/
-                mkdir -p /etc/passmanager/group.d/
-                echo -e "$green OK"
+        echo -e "$blue Creating directories..."
+        mkdir -p "/home/$USER/.passmanager/users.d/"
+        mkdir -p "/home/$USER/.passmanager/group.d/"
+        echo -e "$green OK"
 
-                echo -e "$blue Generating conf file..."
-                echo -e "## Conf file for passmanager\nName: $2\nSFTPHost: \nSFTPPort: \nLastUser: don't touch" > /etc/passmanager/passmanager.conf
-                echo -e "$green OK"
+        echo -e "$blue Generating conf file..."
+        echo -e "## Conf file for passmanager\nName: $USER\nSFTPHost: \nSFTPPort:" > "/home/$USER/.passmanager/passmanager.conf"
+        echo -e "$green OK"
 
-                echo -e "$blue Generating keys..."
-                openssl genrsa -out /etc/passmanager/private.key 2048
-                openssl rsa -in /etc/passmanager/private.key -pubout -out /etc/passmanager/public.key
-                echo -e "$green OK"
+        echo -e "$blue Generating keys..."
+        openssl genrsa -out "/home/$USER/.passmanager/private.key" 2048
+        openssl rsa -in "/home/$USER/.passmanager/private.key" -pubout -out "/home/$USER/.passmanager/public.key"
+        echo -e "$green OK"
 
-                echo -e "$blue Applying rights..."
-                chown -R $2 /etc/passmanager/
-                echo -e "$green OK"
-            else
-                echo -e "$red Please provide your username as second argument"
-            fi
-        fi 
+        echo -e "$blue Applying rights..."
+        chown -R $USER "/home/$USER/.passmanager/"
+        echo -e "$green OK"
     fi
 elif [ "$1" == "get" ]
 then
