@@ -22,7 +22,7 @@ then
         echo -e "$green OK"
 
         echo -e "$blue Generating conf file..."
-        echo -e "## Conf file for passmanager\nName: $USER\nSFTPHost: \nSFTPPort:" > "$DIR/passmanager.conf"
+        echo -e "## Conf file for passmanager\nName: $USER\nSFTPHost: \nSFTPPort: \nSFTPUser: " > "$DIR/passmanager.conf"
         echo -e "$green OK"
 
         echo -e "$blue Generating keys..."
@@ -30,42 +30,52 @@ then
         openssl rsa -in "$DIR/private.key" -pubout -out "$DIR/public.key"
         echo -e "$green OK"
 
+        echo -e "$blue Copy key to users.d dir..."
+        cp "$DIR/public.key" "$DIR/users.d/$USER.conf"
+        echo -e "$green OK"
+
         echo -e "$blue Applying rights..."
         chown -R $USER "$DIR/"
         echo -e "$green OK"
     fi
-elif [ "$1" == "get" ]
+elif [ "$1" == "getpwd" ]
 then
+    passwordname=$2
+
     name=$(cat $DIR/passmanager.conf | grep Name | awk '{ print $2 }')
     sftphost=$(cat $DIR/passmanager.conf | grep SFTPHost | awk '{ print $2 }')
     sftpport=$(cat $DIR/passmanager.conf | grep SFTPPort | awk '{ print $2 }')
+    sftpuser=$(cat $DIR/passmanager.conf | grep SFTPUser | awk '{ print $2 }')
 
-    mkdir -p /tmp/passmanager/get/
-    #user=$(zenity --entry --title "Name request" --text "Please enter user to get :")
+    mkdir -p /tmp/passmanager/getpwd/
+    read -p "Please enter the password creator : " creator
 
-    sftp -P $sftpport $sftphost:/$user$name.gz.enc /tmp/passmanager/get/$user$name.gz.enc > /dev/null
-    sftp -P $sftpport $sftphost:/$user$name.bin.enc /tmp/passmanager/get/$user$name.bin.enc > /dev/null
-    openssl rsautl -decrypt -inkey $DIR/private.key -in /tmp/passmanager/get/$user$name.bin.enc -out /tmp/passmanager/get/$user$name.bin
-    openssl enc -d -aes-256-cbc -md sha512 -pbkdf2 -in /tmp/passmanager/get/$user$name.gz.enc -out /tmp/passmanager/get/$user$name.gz -pass file:/tmp/passmanager/get/$user$name.bin
-    gzip -d /tmp/passmanager/get/$user$name.gz
-    rm /tmp/passmanager/get/$user$name*
-elif [ "$1" == "send" ]
+    sftp -P $sftpport $sftpuser@$sftphost:/$passwordname-$creator-$name.gz.enc /tmp/passmanager/getpwd/$passwordname-$creator-$name.gz.enc > /dev/null
+    sftp -P $sftpport $sftpuser@$sftphost:/$passwordname-$creator-$name.bin.enc /tmp/passmanager/getpwd/$passwordname-$creator-$name.bin.enc > /dev/null
+    openssl rsautl -decrypt -inkey $DIR/private.key -in /tmp/passmanager/getpwd/$passwordname-$creator-$name.bin.enc -out /tmp/passmanager/getpwd/$passwordname-$creator-$name.bin
+    openssl enc -d -aes-256-cbc -md sha512 -pbkdf2 -in /tmp/passmanager/getpwd/$passwordname-$creator-$name.gz.enc -out /tmp/passmanager/getpwd/$passwordname-$creator-$name.gz -pass file:/tmp/passmanager/getpwd/$passwordname-$creator-$name.bin
+    gzip -d /tmp/passmanager/getpwd/$passwordname-$creator-$name.gz
+    echo -e "$red Password $passwordname :\n"
+    cat /tmp/passmanager/getpwd/$passwordname-$creator-$name
+    rm /tmp/passmanager/getpwd/$passwordname-$creator-$name*
+elif [ "$1" == "addpwd" ]
 then
+    passwordname=$2
+
     name=$(cat $DIR/passmanager.conf | grep Name | awk '{ print $2 }')
     sftphost=$(cat $DIR/passmanager.conf | grep SFTPHost | awk '{ print $2 }')
     sftpport=$(cat $DIR/passmanager.conf | grep SFTPPort | awk '{ print $2 }')
+    sftpuser=$(cat $DIR/passmanager.conf | grep SFTPUser | awk '{ print $2 }')
 
-    mkdir -p /tmp/passmanager/send/
-    #allow_users=$(zenity --entry --title "Name request" --text "Please enter allow users :")
- 
+    mkdir -p /tmp/passmanager/addpwd/
+    read -p "Please enter allow users or group name (left empty if only you can access) and (separate them by a ',' if there is multiple user) : " allow_users
+    read -p "Please enter the password : " password
+
     if [ "$allow_users" == "" ]
     then
-        lastuser=$(cat $DIR/passmanager.conf | grep LastUser | awk '{ print $2 }')
-        allow_users=$lastuser
-    #Fix by moving this block after the else block
+        allow_users=$name
     elif [ -f "$DIR/group.d/$allow_users" ]
     then
-        give_users=$allow_users
         allow_users=$(cat $DIR/group.d/$allow_users)
     fi
 
@@ -73,21 +83,14 @@ then
 
     for user in $users
     do
-        targets=$(xclip -selection clipboard -t TARGETS -o)
-
-	if echo "$targets" | grep image > /dev/null
-        then
-            xclip -selection clipboard -o -t image/png > "/tmp/passmanager/send/$name$user"
-        else
-            xclip -selection clipboard -o > "/tmp/passmanager/send/$name$user"
-        fi
-        gzip /tmp/passmanager/send/$name$user
-        openssl rand -base64 32 > "/tmp/passmanager/send/$name$user.bin"
-        openssl rsautl -encrypt -pubin -inkey "$DIR/users.d/$user.conf" -in "/tmp/passmanager/send/$name$user.bin" -out "/tmp/passmanager/send/$name$user.bin.enc"
-        openssl enc -aes-256-cbc -md sha512 -pbkdf2 -salt -in /tmp/passmanager/send/$name$user.gz -out /tmp/passmanager/send/$name$user.gz.enc -pass file:/tmp/passmanager/send/$name$user.bin
-        sftp -P $sftpport $sftphost <<< $"put /tmp/passmanager/send/$name$user.gz.enc" > /dev/null
-        sftp -P $sftpport $sftphost <<< $"put /tmp/passmanager/send/$name$user.bin.enc" > /dev/null
-        rm /tmp/passmanager/send/$name$user*
+        echo "$password" > "/tmp/passmanager/addpwd/$passwordname-$name-$user"
+        gzip /tmp/passmanager/addpwd/$passwordname-$name-$user
+        openssl rand -base64 32 > "/tmp/passmanager/addpwd/$passwordname-$name-$user.bin"
+        openssl rsautl -encrypt -pubin -inkey "$DIR/users.d/$user.conf" -in "/tmp/passmanager/addpwd/$passwordname-$name-$user.bin" -out "/tmp/passmanager/addpwd/$passwordname-$name-$user.bin.enc"
+        openssl enc -aes-256-cbc -md sha512 -pbkdf2 -salt -in /tmp/passmanager/addpwd/$passwordname-$name-$user.gz -out /tmp/passmanager/addpwd/$passwordname-$name-$user.gz.enc -pass file:/tmp/passmanager/addpwd/$passwordname-$name-$user.bin
+        sftp -P $sftpport $sftpuser@$sftphost <<< $"put /tmp/passmanager/addpwd/$passwordname-$name-$user.gz.enc" > /dev/null
+        sftp -P $sftpport $sftpuser@$sftphost <<< $"put /tmp/passmanager/addpwd/$passwordname-$name-$user.bin.enc" > /dev/null
+        rm /tmp/passmanager/addpwd/$passwordname-$name-$user*
     done
 elif [ "$1" == "getpublickey" ]
 then
@@ -101,9 +104,9 @@ then
 elif [ "$1" == "adduser" ]
 then
     user=$2
-    read -p "Please copy the public key in your clipboard before click on OK !" ssh_key
+    read -p 'Please copy the public key in your clipboard before press Enter ' ssh_key
     echo -e "$blue Adding User..."
-    echo $ssh_key > "$DIR/users.d/$user.conf"
+    xclip -o > "$DIR/users.d/$user.conf"
 elif [ "$1" == "group" ]
 then
     if [ "$2" == "delete" ]
