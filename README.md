@@ -1,5 +1,12 @@
 # PassManager
 
+## Members :
+
+* Jawad FRASNI
+* Yannis BOUKARI
+* Anthony DELGEHIER
+* Tom SAUNIER
+
 ## Requirement :
 
 ### SFTP Server
