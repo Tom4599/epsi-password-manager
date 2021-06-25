@@ -186,6 +186,19 @@ then
 	    printf "%-30s| %-20s\n" $nom $creator
         fi
     done
+elif [ "$1" == "delpwd" ]
+then
+    name=$(cat $DIR/passmanager.conf | grep Name | awk '{ print $2 }')
+    sftphost=$(cat $DIR/passmanager.conf | grep SFTPHost | awk '{ print $2 }')
+    sftpport=$(cat $DIR/passmanager.conf | grep SFTPPort | awk '{ print $2 }')
+    sftpuser=$(cat $DIR/passmanager.conf | grep SFTPUser | awk '{ print $2 }')
+    title=$2
+    check_pwd=$(sftp -q -P $sftpport $sftpuser@$sftphost <<< $"ls $title-$name-*.gz.enc" 2> /dev/null | grep -v '^sftp>')
+    if [ -z "$check_pwd" ]; then
+        echo -e "$red This password doesn't exist"
+    else
+        sftp -q -P $sftpport $sftpuser@$sftphost <<< $"rm $title-$name-*.enc" | grep -v '^sftp>'
+    fi
 else
     echo -e "$red Unknown option"
     exit 1
